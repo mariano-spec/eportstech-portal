@@ -1,20 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://placeholder.supabase.co';
-const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || 'placeholder-key';
+// Use Vite's import.meta.env for environment variables
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || '';
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
 
-const hasValidConfig = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  return url && key && url.length > 0 && key.length > 0;
-};
-
-if (!hasValidConfig()) {
-  console.warn('⚠️ Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in environment.');
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ ERROR: Supabase credentials not configured!');
+  console.error('Make sure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in .env.local');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 console.log('✅ Supabase Client initialized');
-console.log('   URL:', supabaseUrl ? '✓ configured' : '✗ missing');
-console.log('   Key:', supabaseAnonKey ? '✓ configured' : '✗ missing');
+console.log('   URL:', supabaseUrl ? '✓ configured' : '✗ MISSING');
+console.log('   Key:', supabaseAnonKey ? '✓ configured' : '✗ MISSING');
