@@ -25,49 +25,51 @@ const SyncPage: React.FC = () => {
     setSyncStatus({ services: null, configuratorItems: null });
 
     try {
-      // Log data being synced
-      console.log('📊 Data to sync:');
-      console.log('Services:', SERVICES_DATA);
-      console.log('Configurator Items:', CONFIGURATOR_ITEMS);
+      console.log('📊 === SINCRONIZACIÓN INICIADA ===');
+      console.log('📤 Datos a sincronizar:');
+      console.log('Services:', SERVICES_DATA.length, 'items');
+      console.log('Configurator Items:', CONFIGURATOR_ITEMS.length, 'items');
 
-      // Sync Services
-      console.log('📤 Syncing services...');
+      // === SYNC SERVICES ===
+      console.log('\n📤 [1/2] Sincronizando SERVICIOS...');
       const { error: servicesError, data: servicesData } = await supabase
         .from('services')
         .upsert(SERVICES_DATA, { onConflict: 'id' })
         .select();
 
       if (servicesError) {
-        console.error('Services error:', servicesError);
+        console.error('❌ Services error:', servicesError);
         throw new Error(`Services: ${servicesError.message}`);
       }
 
-      console.log('✅ Services synced:', servicesData);
+      console.log('✅ Services sincronizados:', servicesData?.length || SERVICES_DATA.length);
       setSyncStatus(prev => ({ ...prev, services: true }));
       setSyncStats(prev => ({ ...prev, services: servicesData?.length || SERVICES_DATA.length }));
       setSyncMessage('✅ Servicios sincronizados correctamente');
 
-      // Small delay for better UX
+      // Small delay for UX
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Sync Configurator Items
-      console.log('📤 Syncing configurator items...');
+      // === SYNC CONFIGURATOR ITEMS ===
+      console.log('\n📤 [2/2] Sincronizando CONFIGURATOR ITEMS...');
       const { error: itemsError, data: itemsData } = await supabase
         .from('configurator_items')
         .upsert(CONFIGURATOR_ITEMS, { onConflict: 'id' })
         .select();
 
       if (itemsError) {
-        console.error('Items error:', itemsError);
+        console.error('❌ Items error:', itemsError);
         throw new Error(`Items: ${itemsError.message}`);
       }
 
-      console.log('✅ Items synced:', itemsData);
+      console.log('✅ Items sincronizados:', itemsData?.length || CONFIGURATOR_ITEMS.length);
       setSyncStatus(prev => ({ ...prev, configuratorItems: true }));
       setSyncStats(prev => ({ ...prev, items: itemsData?.length || CONFIGURATOR_ITEMS.length }));
       setSyncMessage('✅ ¡Sincronización completada exitosamente!');
+      
+      console.log('\n✅ === SINCRONIZACIÓN COMPLETADA ===\n');
 
-      // Navigate to admin after 2 seconds
+      // Navigate after 2 seconds
       setTimeout(() => navigate('/admin'), 2000);
     } catch (err) {
       console.error('❌ Sync error:', err);
