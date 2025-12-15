@@ -1,15 +1,9 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase config from environment
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing Supabase configuration');
-}
-
-// Create Supabase client with SERVICE_ROLE_KEY (server-side only!)
 const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
 interface SyncRequest {
@@ -28,7 +22,6 @@ interface SyncResponse {
 }
 
 export const handler: Handler = async (event) => {
-  // Only allow POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -37,9 +30,8 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    // Parse request body
     const body: SyncRequest = JSON.parse(event.body || '{}');
-    const { services, configuratorItems } = body;
+    let { services, configuratorItems } = body;
 
     if (!services || !configuratorItems) {
       return {
@@ -55,7 +47,28 @@ export const handler: Handler = async (event) => {
     console.log(`   Services: ${services.length} items`);
     console.log(`   Items: ${configuratorItems.length} items`);
 
-    // === SYNC SERVICES ===
+    // Clean services - remove optional fields that might not exist in schema
+    services = services.map(s => ({
+      id: s.id,
+      icon: s.icon,
+      title: s.title,
+      description: s.description,
+      category: s.category,
+      visible: s.visible,
+      sort_order: s.sort_order
+    }));
+
+    // Clean configurator items
+    configuratorItems = configuratorItems.map(item => ({
+      id: item.id,
+      icon: item.icon,
+      category: item.category,
+      title: item.title,
+      benefit: item.benefit,
+      visible: item.visible,
+      sort_order: item.sort_order
+    }));
+
     console.log('📤 [1/2] Sincronizando SERVICIOS...');
     const { error: servicesError, data: servicesData } = await supabase
       .from('services')
@@ -75,7 +88,6 @@ export const handler: Handler = async (event) => {
 
     console.log(`✅ Services sincronizados: ${servicesData?.length || services.length}`);
 
-    // === SYNC CONFIGURATOR ITEMS ===
     console.log('📤 [2/2] Sincronizando CONFIGURATOR ITEMS...');
     const { error: itemsError, data: itemsData } = await supabase
       .from('configurator_items')
