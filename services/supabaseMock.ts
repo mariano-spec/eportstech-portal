@@ -35,16 +35,31 @@ export const loginMock = async (password: string, email?: string): Promise<boole
      console.error("Email required for real Supabase auth");
      return false;
   }
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
   
-  if (error) {
-      console.error("Login error:", error.message);
+  try {
+    console.log('📤 Attempting login with:', email);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      console.error("❌ Login error:", error.message);
+      console.error("Error details:", error);
       return false;
+    }
+
+    if (!data.session) {
+      console.error("❌ No session returned");
+      return false;
+    }
+
+    console.log('✅ Login successful');
+    return true;
+  } catch (err) {
+    console.error("❌ Login exception:", err);
+    return false;
   }
-  return true;
 };
 
 export const logoutMock = async () => {
@@ -124,7 +139,6 @@ export const updateBrandConfig = async (config: Partial<BrandConfig>, files?: Re
   return true;
 };
 
-// === SERVICES ===
 export const getServices = async (): Promise<Service[]> => {
   console.log('📤 [getServices] Fetching from Supabase...');
   const { data, error } = await supabase
@@ -159,7 +173,6 @@ export const updateServices = async (services: Service[]): Promise<boolean> => {
   return true;
 };
 
-// === CONFIGURATOR ITEMS ===
 export const getConfiguratorItems = async (): Promise<ConfiguratorItem[]> => {
   console.log('📤 [getConfiguratorItems] Fetching from Supabase...');
   const { data, error } = await supabase
