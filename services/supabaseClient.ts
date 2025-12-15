@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Configuració de Supabase
-const supabaseUrl = 'https://mmccrbuetauvzkypalbi.supabase.co';
+const supabaseUrl = 'https://mmccrbuetauvzkypglbi.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tY2NyYnVldGF1dnpreXBnbGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQyNjk1MjIsImV4cCI6MjA0OTg0NTUyMn0.jlFKiZCxyp78dbcMXjdUgzXmRey3br0estMc6fisN44';
 
 // Validar que les variables d'entorn existeixen
