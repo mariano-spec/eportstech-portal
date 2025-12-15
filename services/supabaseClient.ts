@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Usar import.meta.env para Vite (NO process.env)
+// URL CORRECTA: mmccrbuetauvzkypglbi (con 'g' antes de 'lbi')
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
