@@ -32,25 +32,35 @@ export const checkAuth = async (): Promise<boolean> => {
 
 export const loginMock = async (password: string, email?: string): Promise<boolean> => {
   if (!email) {
-     console.error("Email required for real Supabase auth");
+     console.error("Email required for login");
      return false;
   }
   
   try {
-    console.log('📤 Attempting login with:', email);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    console.log('📤 [loginMock] Calling auth backend...');
     
-    if (error) {
-      console.error("❌ Login error:", error.message);
-      console.error("Error details:", error);
+    // Call Netlify Function (backend)
+    const response = await fetch('/.netlify/functions/auth-login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ Login failed:', errorData.error);
       return false;
     }
 
-    if (!data.session) {
-      console.error("❌ No session returned");
+    const data = await response.json();
+
+    if (!data.success) {
+      console.error('❌ Login error:', data.error);
       return false;
     }
 
