@@ -1,11 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Usar import.meta.env para Vite (NO process.env)
-// URL CORRECTA: mmccrbuetauvzkypglbi (con 'g' antes de 'lbi')
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://placeholder.supabase.co';
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || 'placeholder-key';
 
-// Validar configuración
 const hasValidConfig = () => {
   return (
     supabaseUrl &&
@@ -16,16 +13,10 @@ const hasValidConfig = () => {
 };
 
 if (!hasValidConfig()) {
-  console.warn(
-    '⚠️ Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in environment.'
-  );
+  console.warn('⚠️ Supabase not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local');
 }
 
-// Cliente de Supabase
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 console.log('✅ Supabase Client initialized');
 console.log('   URL:', supabaseUrl ? '✓ configured' : '✗ missing');
