@@ -25,6 +25,11 @@ const SyncPage: React.FC = () => {
     setSyncStatus({ services: null, configuratorItems: null });
 
     try {
+      // Log data being synced
+      console.log('📊 Data to sync:');
+      console.log('Services:', SERVICES_DATA);
+      console.log('Configurator Items:', CONFIGURATOR_ITEMS);
+
       // Sync Services
       console.log('📤 Syncing services...');
       const { error: servicesError, data: servicesData } = await supabase
@@ -33,14 +38,16 @@ const SyncPage: React.FC = () => {
         .select();
 
       if (servicesError) {
+        console.error('Services error:', servicesError);
         throw new Error(`Services: ${servicesError.message}`);
       }
 
+      console.log('✅ Services synced:', servicesData);
       setSyncStatus(prev => ({ ...prev, services: true }));
       setSyncStats(prev => ({ ...prev, services: servicesData?.length || SERVICES_DATA.length }));
       setSyncMessage('✅ Servicios sincronizados correctamente');
 
-      // Pequeña pausa para mejor UX
+      // Small delay for better UX
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Sync Configurator Items
@@ -51,14 +58,16 @@ const SyncPage: React.FC = () => {
         .select();
 
       if (itemsError) {
+        console.error('Items error:', itemsError);
         throw new Error(`Items: ${itemsError.message}`);
       }
 
+      console.log('✅ Items synced:', itemsData);
       setSyncStatus(prev => ({ ...prev, configuratorItems: true }));
       setSyncStats(prev => ({ ...prev, items: itemsData?.length || CONFIGURATOR_ITEMS.length }));
       setSyncMessage('✅ ¡Sincronización completada exitosamente!');
 
-      // Ir al admin después de 2 segundos
+      // Navigate to admin after 2 seconds
       setTimeout(() => navigate('/admin'), 2000);
     } catch (err) {
       console.error('❌ Sync error:', err);
