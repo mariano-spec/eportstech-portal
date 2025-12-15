@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, CheckCircle, AlertTriangle, Loader } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Loader } from 'lucide-react';
 import { supabaseAdmin } from '../services/supabaseClient';
 import { SERVICES_DATA, CONFIGURATOR_ITEMS } from '../constants';
 
@@ -11,10 +11,7 @@ interface SyncStatus {
 
 const SyncPage: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [loginError, setLoginError] = useState('');
+  const [isAuthenticated] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     services: null,
@@ -22,40 +19,13 @@ const SyncPage: React.FC = () => {
   });
   const [syncMessage, setSyncMessage] = useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        setLoginError('Email o contraseña incorrectos.');
-        console.error('Auth error:', error);
-        return;
-      }
-
-      if (data.user) {
-        setIsAuthenticated(true);
-        setEmail('');
-        setPassword('');
-      }
-    } catch (err) {
-      setLoginError('Error de conexión con Supabase.');
-      console.error('Login exception:', err);
-    }
-  };
-
   const handleSyncAll = async () => {
     setIsSyncing(true);
     setSyncMessage('Iniciando sincronización...');
 
     try {
       // Sync Services
-      const { error: servicesError } = await supabase
+      const { error: servicesError } = await supabaseAdmin
         .from('services')
         .upsert(SERVICES_DATA, { onConflict: 'id' });
 
@@ -64,7 +34,7 @@ const SyncPage: React.FC = () => {
       setSyncMessage('✅ Servicios sincronizados');
 
       // Sync Configurator Items
-      const { error: itemsError } = await supabase
+      const { error: itemsError } = await supabaseAdmin
         .from('configurator_items')
         .upsert(CONFIGURATOR_ITEMS, { onConflict: 'id' });
 
@@ -83,61 +53,6 @@ const SyncPage: React.FC = () => {
 
     setIsSyncing(false);
   };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-700">
-        <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
-          <div className="text-center mb-6">
-            <Lock size={40} className="text-blue-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Panel de Sincronización</h1>
-            <p className="text-gray-600 text-sm">EportsTech - Administración</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="sync@eportstech.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            {loginError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-700">{loginError}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition"
-            >
-              Iniciar Sesión
-            </button>
-          </form>
-
-
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -189,17 +104,6 @@ const SyncPage: React.FC = () => {
               Ir al Admin
             </button>
           </div>
-
-          <button
-            onClick={() => {
-              setIsAuthenticated(false);
-              setEmail('');
-              setPassword('');
-            }}
-            className="w-full mt-4 text-gray-600 hover:text-gray-800 py-2 text-sm"
-          >
-            Cerrar sesión
-          </button>
         </div>
       </div>
     </div>
