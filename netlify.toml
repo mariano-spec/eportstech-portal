@@ -1,6 +1,3 @@
-cd ~/Documents/eportstech-portal
-
-cat > netlify.toml << 'EOF'
 [build]
   command = "npm install && npm run build"
   publish = "dist"
@@ -14,4 +11,3 @@ cat > netlify.toml << 'EOF'
   from = "/*"
   to = "/index.html"
   status = 200
-EOF
