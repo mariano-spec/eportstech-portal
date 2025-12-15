@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, Loader } from 'lucide-react';
-import { supabaseAdmin } from '../services/supabaseClient';
+import { Lock, CheckCircle, AlertTriangle, Loader } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
 import { SERVICES_DATA, CONFIGURATOR_ITEMS } from '../constants';
 
 interface SyncStatus {
@@ -11,7 +11,10 @@ interface SyncStatus {
 
 const SyncPage: React.FC = () => {
   const navigate = useNavigate();
-  const [isAuthenticated] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     services: null,
@@ -19,13 +22,43 @@ const SyncPage: React.FC = () => {
   });
   const [syncMessage, setSyncMessage] = useState('');
 
+  // Login segur amb Supabase Auth
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setLoginError('Email o contraseña incorrectos.');
+        console.error('Auth error:', error);
+        return;
+      }
+
+      if (data.user) {
+        // Verificar que el usuario es admin (via RLS policies)
+        setIsAuthenticated(true);
+        setEmail('');
+        setPassword('');
+      }
+    } catch (err) {
+      setLoginError('Error de conexión con Supabase.');
+      console.error('Login exception:', err);
+    }
+  };
+
+  // Sincronización SEGURA - protegida por RLS policies
   const handleSyncAll = async () => {
     setIsSyncing(true);
     setSyncMessage('Iniciando sincronización...');
 
     try {
-      // Sync Services
-      const { error: servicesError } = await supabaseAdmin
+      // Sync Services - RLS verifica que sea admin
+      const { error: servicesError } = await supabase
         .from('services')
         .upsert(SERVICES_DATA, { onConflict: 'id' });
 
@@ -33,14 +66,17 @@ const SyncPage: React.FC = () => {
       setSyncStatus(prev => ({ ...prev, services: true }));
       setSyncMessage('✅ Servicios sincronizados');
 
-      // Sync Configurator Items
-      const { error: itemsError } = await supabaseAdmin
+      // Sync Configurator Items - RLS verifica que sea admin
+      const { error: itemsError } = await supabase
         .from('configurator_items')
         .upsert(CONFIGURATOR_ITEMS, { onConflict: 'id' });
 
       if (itemsError) throw new Error(`Items error: ${itemsError.message}`);
       setSyncStatus(prev => ({ ...prev, configuratorItems: true }));
       setSyncMessage('✅ ¡Sincronización completada!');
+
+      // Navegar al admin después de sincronizar
+      setTimeout(() => navigate('/admin'), 2000);
     } catch (err) {
       console.error('Sync error:', err);
       setSyncMessage(`❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
@@ -54,6 +90,71 @@ const SyncPage: React.FC = () => {
     setIsSyncing(false);
   };
 
+  // Logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsAuthenticated(false);
+    setEmail('');
+    setPassword('');
+    setSyncMessage('');
+    setSyncStatus({ services: null, configuratorItems: null });
+  };
+
+  // Pantalla de login
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-700">
+        <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+          <div className="text-center mb-6">
+            <Lock size={40} className="text-blue-600 mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Panel de Sincronización</h1>
+            <p className="text-gray-600 text-sm">EportsTech - Administración</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@eportstech.com"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            {loginError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">{loginError}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition"
+            >
+              Iniciar Sesión
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Pantalla de sincronización (autenticado)
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
@@ -104,6 +205,13 @@ const SyncPage: React.FC = () => {
               Ir al Admin
             </button>
           </div>
+
+          <button
+            onClick={handleLogout}
+            className="w-full mt-4 text-gray-600 hover:text-gray-800 py-2 text-sm"
+          >
+            Cerrar sesión
+          </button>
         </div>
       </div>
     </div>
