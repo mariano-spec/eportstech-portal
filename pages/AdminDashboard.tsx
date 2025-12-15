@@ -109,7 +109,7 @@ const AdminDashboard: React.FC = () => {
       try {
         brand = await getBrandConfig();
       } catch (error) {
-        console.warn('Could not load brand config:', error);
+        console.warn('Could not load brand config, using defaults:', error);
         brand = {
           siteName: '',
           favicon: '',
@@ -138,6 +138,7 @@ const AdminDashboard: React.FC = () => {
           }
         };
       }
+      
       if (!brand.footer) {
           brand.footer = {
              copyrightText: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
