@@ -31,7 +31,6 @@ const HomePage: React.FC<{ lang: Language, brandConfig: BrandConfig }> = ({ lang
   const [prefilledService, setPrefilledService] = useState<string>('');
 
   const handleConfiguratorRequest = (selectedItems: ConfiguratorItem[]) => {
-    // Generate a summary string
     const itemsList = selectedItems.map(item => `- ${item.title[lang]} (${item.benefit[lang]})`).join('\n');
     
     let intro = "";
@@ -48,7 +47,6 @@ const HomePage: React.FC<{ lang: Language, brandConfig: BrandConfig }> = ({ lang
     setCustomMessage(msg);
     setPrefilledService('Custom Configuration');
 
-    // Scroll to contact form
     const contactSection = document.getElementById('contact');
     if (contactSection) {
       contactSection.scrollIntoView({ behavior: 'smooth' });
@@ -69,7 +67,7 @@ const HomePage: React.FC<{ lang: Language, brandConfig: BrandConfig }> = ({ lang
     }
 
     setCustomMessage(msg);
-    setPrefilledService(service.title.en); // Value in dropdown is EN title
+    setPrefilledService(service.title.en);
 
     const contactSection = document.getElementById('contact');
     if (contactSection) {
@@ -89,7 +87,7 @@ const HomePage: React.FC<{ lang: Language, brandConfig: BrandConfig }> = ({ lang
       }
 
       setCustomMessage(msg);
-      setPrefilledService('Consulting'); // Maps to "Consulting" in Dropdown
+      setPrefilledService('Consulting');
 
       const contactSection = document.getElementById('contact');
       if (contactSection) {
@@ -119,7 +117,6 @@ const HomePage: React.FC<{ lang: Language, brandConfig: BrandConfig }> = ({ lang
       
       <footer className="bg-slate-900 text-slate-400 py-12">
         <div className="max-w-7xl mx-auto px-4 flex flex-col items-center text-center">
-          {/* White Logo in Footer - Standard footer size */}
           <div className="mb-8">
               <img 
                   src={footerLogo} 
@@ -136,7 +133,6 @@ const HomePage: React.FC<{ lang: Language, brandConfig: BrandConfig }> = ({ lang
             <a href="#" className="hover:text-white transition-colors">{privacyText}</a>
             <a href="#" className="hover:text-white transition-colors">{legalText}</a>
             <a href="#" className="hover:text-white transition-colors">{cookiesText}</a>
-            {/* Hidden Admin Link */}
             <Link to="/admin" className="text-slate-700 hover:text-slate-500 transition-colors ml-2" title="Acceso Corporativo">
                 <Lock size={12} />
             </Link>
@@ -152,7 +148,7 @@ const App: React.FC = () => {
   const [brandConfig, setBrandConfig] = useState<BrandConfig>({
       siteName: '',
       favicon: '',
-      navLogo: '/logo-blue.png', // Default init to avoid flicker
+      navLogo: '/logo-blue.png',
       footerLogo: '/logo-white.png',
       contactEmail: 'contact@eportstech.com',
       contactPhone: '+34 900 123 456',
@@ -179,7 +175,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     initGA();
-    // Load branding settings immediately
     const loadSettings = async () => {
         try {
           const config = await getBrandConfig();
@@ -190,12 +185,10 @@ const App: React.FC = () => {
     };
     loadSettings();
     
-    // Polling to keep synced with Admin changes for demo (simulating realtime db)
     const interval = setInterval(loadSettings, 1000); 
     return () => clearInterval(interval);
   }, []);
 
-  // Effect to update Document Title and Favicon based on Brand Config
   useEffect(() => {
     if (brandConfig.siteName) {
       document.title = brandConfig.siteName;
@@ -225,7 +218,6 @@ const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         
-        {/* Chatbot is global */}
         <div className="relative z-50">
            <Chatbot lang={language} />
         </div>

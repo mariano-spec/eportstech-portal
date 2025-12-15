@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, CheckCircle, AlertTriangle, Loader } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Loader, RefreshCw } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { SERVICES_DATA, CONFIGURATOR_ITEMS } from '../constants';
 
@@ -11,207 +11,177 @@ interface SyncStatus {
 
 const SyncPage: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [loginError, setLoginError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     services: null,
     configuratorItems: null,
   });
   const [syncMessage, setSyncMessage] = useState('');
+  const [syncStats, setSyncStats] = useState({ services: 0, items: 0 });
 
-  // Login segur amb Supabase Auth
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        setLoginError('Email o contraseña incorrectos.');
-        console.error('Auth error:', error);
-        return;
-      }
-
-      if (data.user) {
-        // Verificar que el usuario es admin (via RLS policies)
-        setIsAuthenticated(true);
-        setEmail('');
-        setPassword('');
-      }
-    } catch (err) {
-      setLoginError('Error de conexión con Supabase.');
-      console.error('Login exception:', err);
-    }
-  };
-
-  // Sincronización SEGURA - protegida por RLS policies
   const handleSyncAll = async () => {
     setIsSyncing(true);
-    setSyncMessage('Iniciando sincronización...');
+    setSyncMessage('🔄 Iniciando sincronización...');
+    setSyncStatus({ services: null, configuratorItems: null });
 
     try {
-      // Sync Services - RLS verifica que sea admin
-      const { error: servicesError } = await supabase
+      // Sync Services
+      console.log('📤 Syncing services...');
+      const { error: servicesError, data: servicesData } = await supabase
         .from('services')
-        .upsert(SERVICES_DATA, { onConflict: 'id' });
+        .upsert(SERVICES_DATA, { onConflict: 'id' })
+        .select();
 
-      if (servicesError) throw new Error(`Services error: ${servicesError.message}`);
+      if (servicesError) {
+        throw new Error(`Services: ${servicesError.message}`);
+      }
+
       setSyncStatus(prev => ({ ...prev, services: true }));
-      setSyncMessage('✅ Servicios sincronizados');
+      setSyncStats(prev => ({ ...prev, services: servicesData?.length || SERVICES_DATA.length }));
+      setSyncMessage('✅ Servicios sincronizados correctamente');
 
-      // Sync Configurator Items - RLS verifica que sea admin
-      const { error: itemsError } = await supabase
+      // Pequeña pausa para mejor UX
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Sync Configurator Items
+      console.log('📤 Syncing configurator items...');
+      const { error: itemsError, data: itemsData } = await supabase
         .from('configurator_items')
-        .upsert(CONFIGURATOR_ITEMS, { onConflict: 'id' });
+        .upsert(CONFIGURATOR_ITEMS, { onConflict: 'id' })
+        .select();
 
-      if (itemsError) throw new Error(`Items error: ${itemsError.message}`);
+      if (itemsError) {
+        throw new Error(`Items: ${itemsError.message}`);
+      }
+
       setSyncStatus(prev => ({ ...prev, configuratorItems: true }));
-      setSyncMessage('✅ ¡Sincronización completada!');
+      setSyncStats(prev => ({ ...prev, items: itemsData?.length || CONFIGURATOR_ITEMS.length }));
+      setSyncMessage('✅ ¡Sincronización completada exitosamente!');
 
-      // Navegar al admin después de sincronizar
+      // Ir al admin después de 2 segundos
       setTimeout(() => navigate('/admin'), 2000);
     } catch (err) {
-      console.error('Sync error:', err);
-      setSyncMessage(`❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
-      setSyncStatus(prev => ({
-        ...prev,
-        services: false,
-        configuratorItems: false,
-      }));
+      console.error('❌ Sync error:', err);
+      setSyncMessage(
+        `❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`
+      );
+      setSyncStatus({ services: false, configuratorItems: false });
     }
 
     setIsSyncing(false);
   };
 
-  // Logout
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsAuthenticated(false);
-    setEmail('');
-    setPassword('');
-    setSyncMessage('');
-    setSyncStatus({ services: null, configuratorItems: null });
-  };
-
-  // Pantalla de login
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-700">
-        <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
-          <div className="text-center mb-6">
-            <Lock size={40} className="text-blue-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Panel de Sincronización</h1>
-            <p className="text-gray-600 text-sm">EportsTech - Administración</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg shadow-xl p-8 border border-slate-200">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <RefreshCw className="w-8 h-8 text-blue-600" />
+              <h1 className="text-4xl font-bold text-slate-900">Sincronización</h1>
+            </div>
+            <p className="text-slate-600">Carga los datos de la aplicación a Supabase</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@eportstech.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            {loginError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-700">{loginError}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition"
-            >
-              Iniciar Sesión
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // Pantalla de sincronización (autenticado)
-  return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Sincronización de Datos</h1>
-          <p className="text-gray-600 mb-8">Carga los datos de la aplicación a Supabase</p>
-
+          {/* Status Message */}
           {syncMessage && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">{syncMessage}</p>
+            <div
+              className={`mb-6 p-4 rounded-lg border ${
+                syncMessage.includes('❌')
+                  ? 'bg-red-50 border-red-200 text-red-800'
+                  : syncMessage.includes('✅')
+                  ? 'bg-green-50 border-green-200 text-green-800'
+                  : 'bg-blue-50 border-blue-200 text-blue-800'
+              }`}
+            >
+              <p className="font-medium">{syncMessage}</p>
             </div>
           )}
 
-          <div className="space-y-4 mb-8">
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+          {/* Data to Sync */}
+          <div className="space-y-3 mb-8">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200">
               <div>
-                <h3 className="font-semibold text-gray-800">Servicios</h3>
-                <p className="text-sm text-gray-600">{SERVICES_DATA.length} servicios a sincronizar</p>
+                <h3 className="font-semibold text-slate-900">Servicios</h3>
+                <p className="text-sm text-slate-600">
+                  {SERVICES_DATA.length} servicios a sincronizar
+                </p>
               </div>
-              {syncStatus.services === true && <CheckCircle size={24} className="text-green-600" />}
-              {syncStatus.services === false && <AlertTriangle size={24} className="text-red-600" />}
+              <div className="flex items-center gap-2">
+                {syncStatus.services === true && (
+                  <>
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                    <span className="text-sm text-green-600 font-medium">
+                      {syncStats.services} ✓
+                    </span>
+                  </>
+                )}
+                {syncStatus.services === false && (
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-200">
               <div>
-                <h3 className="font-semibold text-gray-800">Items del Configurador</h3>
-                <p className="text-sm text-gray-600">{CONFIGURATOR_ITEMS.length} items a sincronizar</p>
+                <h3 className="font-semibold text-slate-900">Items del Configurador</h3>
+                <p className="text-sm text-slate-600">
+                  {CONFIGURATOR_ITEMS.length} items a sincronizar
+                </p>
               </div>
-              {syncStatus.configuratorItems === true && <CheckCircle size={24} className="text-green-600" />}
-              {syncStatus.configuratorItems === false && <AlertTriangle size={24} className="text-red-600" />}
+              <div className="flex items-center gap-2">
+                {syncStatus.configuratorItems === true && (
+                  <>
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                    <span className="text-sm text-green-600 font-medium">
+                      {syncStats.items} ✓
+                    </span>
+                  </>
+                )}
+                {syncStatus.configuratorItems === false && (
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex gap-4">
+          {/* Actions */}
+          <div className="flex gap-3">
             <button
               onClick={handleSyncAll}
               disabled={isSyncing}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
             >
-              {isSyncing && <Loader size={20} className="animate-spin" />}
-              {isSyncing ? 'Sincronizando...' : 'Sincronizar Todo'}
+              {isSyncing ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  Sincronizando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-5 h-5" />
+                  Sincronizar Todo
+                </>
+              )}
             </button>
 
             <button
               onClick={() => navigate('/admin')}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-lg transition"
+              disabled={isSyncing}
+              className="flex-1 bg-slate-200 hover:bg-slate-300 disabled:bg-slate-100 text-slate-800 font-semibold py-3 rounded-lg transition"
             >
               Ir al Admin
             </button>
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="w-full mt-4 text-gray-600 hover:text-gray-800 py-2 text-sm"
-          >
-            Cerrar sesión
-          </button>
+          {/* Info Box */}
+          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-900">
+              <strong>ℹ️ Nota:</strong> Esta página sincroniza los datos de la aplicación a la base de datos Supabase. 
+              Los datos ya existentes se actualizarán automáticamente.
+            </p>
+          </div>
         </div>
       </div>
     </div>
