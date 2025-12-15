@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, Loader, RefreshCw } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
 import { SERVICES_DATA, CONFIGURATOR_ITEMS } from '../constants';
 
 interface SyncStatus {
   services: boolean | null;
   configuratorItems: boolean | null;
+}
+
+interface SyncResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    servicesCount: number;
+    itemsCount: number;
+  };
+  error?: string;
 }
 
 const SyncPage: React.FC = () => {
@@ -30,43 +39,41 @@ const SyncPage: React.FC = () => {
       console.log('Services:', SERVICES_DATA.length, 'items');
       console.log('Configurator Items:', CONFIGURATOR_ITEMS.length, 'items');
 
-      // === SYNC SERVICES ===
-      console.log('\n📤 [1/2] Sincronizando SERVICIOS...');
-      const { error: servicesError, data: servicesData } = await supabase
-        .from('services')
-        .upsert(SERVICES_DATA, { onConflict: 'id' })
-        .select();
-
-      if (servicesError) {
-        console.error('❌ Services error:', servicesError);
-        throw new Error(`Services: ${servicesError.message}`);
-      }
-
-      console.log('✅ Services sincronizados:', servicesData?.length || SERVICES_DATA.length);
-      setSyncStatus(prev => ({ ...prev, services: true }));
-      setSyncStats(prev => ({ ...prev, services: servicesData?.length || SERVICES_DATA.length }));
-      setSyncMessage('✅ Servicios sincronizados correctamente');
-
-      // Small delay for UX
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // === SYNC CONFIGURATOR ITEMS ===
-      console.log('\n📤 [2/2] Sincronizando CONFIGURATOR ITEMS...');
-      const { error: itemsError, data: itemsData } = await supabase
-        .from('configurator_items')
-        .upsert(CONFIGURATOR_ITEMS, { onConflict: 'id' })
-        .select();
-
-      if (itemsError) {
-        console.error('❌ Items error:', itemsError);
-        throw new Error(`Items: ${itemsError.message}`);
-      }
-
-      console.log('✅ Items sincronizados:', itemsData?.length || CONFIGURATOR_ITEMS.length);
-      setSyncStatus(prev => ({ ...prev, configuratorItems: true }));
-      setSyncStats(prev => ({ ...prev, items: itemsData?.length || CONFIGURATOR_ITEMS.length }));
-      setSyncMessage('✅ ¡Sincronización completada exitosamente!');
+      // Call Netlify Function (backend)
+      console.log('📤 Calling sync backend function...');
       
+      const response = await fetch('/.netlify/functions/sync-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          services: SERVICES_DATA,
+          configuratorItems: CONFIGURATOR_ITEMS,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data: SyncResponse = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Sync failed');
+      }
+
+      console.log('✅ Sync response:', data);
+      
+      // Update UI
+      setSyncStatus({ services: true, configuratorItems: true });
+      setSyncStats({
+        services: data.data?.servicesCount || SERVICES_DATA.length,
+        items: data.data?.itemsCount || CONFIGURATOR_ITEMS.length,
+      });
+      setSyncMessage('✅ ¡Sincronización completada exitosamente!');
+
       console.log('\n✅ === SINCRONIZACIÓN COMPLETADA ===\n');
 
       // Navigate after 2 seconds
