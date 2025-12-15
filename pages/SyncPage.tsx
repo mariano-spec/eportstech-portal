@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, CheckCircle, AlertTriangle, Loader } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
-import { SERVICES_DATA, CONFIGURATOR_ITEMS, TRANSLATIONS } from '../constants';
+import { SERVICES_DATA, CONFIGURATOR_ITEMS } from '../constants';
 
 interface SyncStatus {
   services: boolean | null;
   configuratorItems: boolean | null;
-  brandConfig: boolean | null;
-  botConfig: boolean | null;
-  notificationSettings: boolean | null;
 }
 
 const SyncPage: React.FC = () => {
@@ -22,43 +19,68 @@ const SyncPage: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     services: null,
     configuratorItems: null,
-    brandConfig: null,
-    botConfig: null,
-    notificationSettings: null,
   });
   const [syncMessage, setSyncMessage] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    
     try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       if (error) {
-        setLoginError('Credenciales inválidas.');
+        setLoginError('Email o contraseña incorrectos.');
+        console.error('Auth error:', error);
         return;
       }
-      if (data.user) setIsAuthenticated(true);
+
+      if (data.user) {
+        setIsAuthenticated(true);
+        setEmail('');
+        setPassword('');
+      }
     } catch (err) {
-      setLoginError('Error al conectar con Supabase.');
+      setLoginError('Error de conexión con Supabase.');
+      console.error('Login exception:', err);
     }
   };
 
   const handleSyncAll = async () => {
     setIsSyncing(true);
-    setSyncMessage('Sincronizando...');
-    
+    setSyncMessage('Iniciando sincronización...');
+
     try {
-      await supabaseClient.from('services').upsert(SERVICES_DATA, { onConflict: 'id' });
+      // Sync Services
+      const { error: servicesError } = await supabase
+        .from('services')
+        .upsert(SERVICES_DATA, { onConflict: 'id' });
+
+      if (servicesError) throw new Error(`Services error: ${servicesError.message}`);
       setSyncStatus(prev => ({ ...prev, services: true }));
-      
-      await supabaseClient.from('configurator_items').upsert(CONFIGURATOR_ITEMS, { onConflict: 'id' });
+      setSyncMessage('✅ Servicios sincronizados');
+
+      // Sync Configurator Items
+      const { error: itemsError } = await supabase
+        .from('configurator_items')
+        .upsert(CONFIGURATOR_ITEMS, { onConflict: 'id' });
+
+      if (itemsError) throw new Error(`Items error: ${itemsError.message}`);
       setSyncStatus(prev => ({ ...prev, configuratorItems: true }));
-      
-      setSyncMessage('✅ Sincronización completada!');
+      setSyncMessage('✅ ¡Sincronización completada!');
     } catch (err) {
-      setSyncMessage('❌ Error en sincronización');
+      console.error('Sync error:', err);
+      setSyncMessage(`❌ Error: ${err instanceof Error ? err.message : 'Error desconocido'}`);
+      setSyncStatus(prev => ({
+        ...prev,
+        services: false,
+        configuratorItems: false,
+      }));
     }
-    
+
     setIsSyncing(false);
   };
 
@@ -66,16 +88,56 @@ const SyncPage: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-700">
         <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
-          <Lock size={32} className="text-blue-600 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">EportsTech Sync</h1>
-          <p className="text-gray-600 text-center mb-6">Panel de sincronización</p>
+          <div className="text-center mb-6">
+            <Lock size={40} className="text-blue-600 mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Panel de Sincronización</h1>
+            <p className="text-gray-600 text-sm">EportsTech - Administración</p>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="sync@eportstech.com" className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
-            {loginError && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-sm text-red-700">{loginError}</p></div>}
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg">Iniciar Sesión</button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="sync@eportstech.com"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            {loginError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">{loginError}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition"
+            >
+              Iniciar Sesión
+            </button>
           </form>
+
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-xs text-gray-600 mb-2"><strong>Credenciales:</strong></p>
+            <p className="text-xs text-gray-600">Email: <code className="bg-white px-2 py-1 rounded border">sync@eportstech.com</code></p>
+            <p className="text-xs text-gray-600">Contraseña: <code className="bg-white px-2 py-1 rounded border">sync123</code></p>
+          </div>
         </div>
       </div>
     );
@@ -85,47 +147,63 @@ const SyncPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-8">Sincronización de Datos</h1>
-          
-          {syncMessage && <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg"><p className="text-sm text-blue-800">{syncMessage}</p></div>}
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Sincronización de Datos</h1>
+          <p className="text-gray-600 mb-8">Carga los datos de la aplicación a Supabase</p>
+
+          {syncMessage && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">{syncMessage}</p>
+            </div>
+          )}
 
           <div className="space-y-4 mb-8">
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div><h3 className="font-semibold">Servicios</h3><p className="text-sm text-gray-600">{SERVICES_DATA.length} servicios</p></div>
+            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <div>
+                <h3 className="font-semibold text-gray-800">Servicios</h3>
+                <p className="text-sm text-gray-600">{SERVICES_DATA.length} servicios a sincronizar</p>
+              </div>
               {syncStatus.services === true && <CheckCircle size={24} className="text-green-600" />}
               {syncStatus.services === false && <AlertTriangle size={24} className="text-red-600" />}
             </div>
 
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div><h3 className="font-semibold">Items Configurador</h3><p className="text-sm text-gray-600">{CONFIGURATOR_ITEMS.length} items</p></div>
+            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <div>
+                <h3 className="font-semibold text-gray-800">Items del Configurador</h3>
+                <p className="text-sm text-gray-600">{CONFIGURATOR_ITEMS.length} items a sincronizar</p>
+              </div>
               {syncStatus.configuratorItems === true && <CheckCircle size={24} className="text-green-600" />}
-            </div>
-
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div><h3 className="font-semibold">Brand Config</h3><p className="text-sm text-gray-600">Textos y logos</p></div>
-              {syncStatus.brandConfig === true && <CheckCircle size={24} className="text-green-600" />}
-            </div>
-
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div><h3 className="font-semibold">Bot Config</h3><p className="text-sm text-gray-600">Configuración IA</p></div>
-              {syncStatus.botConfig === true && <CheckCircle size={24} className="text-green-600" />}
-            </div>
-
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div><h3 className="font-semibold">Notificaciones</h3><p className="text-sm text-gray-600">Emails y alertas</p></div>
-              {syncStatus.notificationSettings === true && <CheckCircle size={24} className="text-green-600" />}
+              {syncStatus.configuratorItems === false && <AlertTriangle size={24} className="text-red-600" />}
             </div>
           </div>
 
           <div className="flex gap-4">
-            <button onClick={handleSyncAll} disabled={isSyncing} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2">
+            <button
+              onClick={handleSyncAll}
+              disabled={isSyncing}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+            >
               {isSyncing && <Loader size={20} className="animate-spin" />}
               {isSyncing ? 'Sincronizando...' : 'Sincronizar Todo'}
             </button>
-            <button onClick={() => navigate('/admin')} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-lg">Admin</button>
+
+            <button
+              onClick={() => navigate('/admin')}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-lg transition"
+            >
+              Ir al Admin
+            </button>
           </div>
 
-          <button onClick={() => setIsAuthenticated(false)} className="w-full mt-4 text-gray-600 hover:text-gray-800 py-2">Logout</button>
+          <button
+            onClick={() => {
+              setIsAuthenticated(false);
+              setEmail('');
+              setPassword('');
+            }}
+            className="w-full mt-4 text-gray-600 hover:text-gray-800 py-2 text-sm"
+          >
+            Cerrar sesión
+          </button>
         </div>
       </div>
     </div>
