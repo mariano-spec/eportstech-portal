@@ -1,4 +1,3 @@
-
 import { supabase } from './supabaseClient';
 import { LeadForm, BrandConfig, ConfiguratorLead, NotificationSettings, GlobalSettings, Service, ConfiguratorItem, DynamicSection, ServiceCategory, ConfiguratorItemResult, BotConfig, BenefitsConfig } from "../types";
 import { TRANSLATIONS, SERVICES_DATA, CONFIGURATOR_ITEMS } from '../constants';
@@ -145,7 +144,7 @@ export const getServices = async (): Promise<Service[]> => {
   const { data, error } = await supabase
     .from('services')
     .select('*')
-    .order('order', { ascending: true });
+    .order('sort_order', { ascending: true });
 
   if (error || !data || data.length === 0) {
       // Return constants if DB empty
@@ -172,7 +171,7 @@ export const getConfiguratorItems = async (): Promise<ConfiguratorItem[]> => {
   const { data, error } = await supabase
     .from('configurator_items')
     .select('*')
-    .order('order', { ascending: true });
+    .order('sort_order', { ascending: true });
 
   if (error || !data || data.length === 0) {
       return CONFIGURATOR_ITEMS;
@@ -257,8 +256,8 @@ export const getBotConfig = async (): Promise<BotConfig> => {
       // Fallback
       return {
           name: "NEXI_tech",
-          tone: "professional",
-          responseLength: "balanced",
+          tone: "professional" as const,
+          responseLength: "balanced" as const,
           highlightedProduct: "Services",
           businessHoursStart: "09:00",
           businessHoursEnd: "18:00",

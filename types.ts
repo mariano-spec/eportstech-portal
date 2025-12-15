@@ -1,5 +1,3 @@
-
-
 export type Language = 'es' | 'ca' | 'en' | 'fr' | 'de' | 'it';
 
 export interface Translation {
@@ -19,7 +17,7 @@ export interface Service {
   features?: Record<Language, string[]>;
   // Management fields
   visible: boolean;
-  order: number;
+  sort_order: number;
 }
 
 export interface ConfiguratorItem {
@@ -28,9 +26,10 @@ export interface ConfiguratorItem {
   category: ServiceCategory;
   title: Record<Language, string>;
   benefit: Record<Language, string>;
+  description?: Record<Language, string>;
   // Management fields
   visible: boolean;
-  order: number;
+  sort_order: number;
 }
 
 export type RecommendationLevel = 'essential' | 'recommended' | 'optional';
@@ -160,7 +159,7 @@ export interface DynamicSection {
   id: string;
   title: Record<Language, string>;
   content: Record<Language, string>;
-  order: number;
+  sort_order: number;
 }
 
 export enum ServiceCategory {
