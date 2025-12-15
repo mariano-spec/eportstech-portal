@@ -2,11 +2,6 @@ import { supabase } from './supabaseClient';
 import { LeadForm, BrandConfig, ConfiguratorLead, NotificationSettings, GlobalSettings, Service, ConfiguratorItem, DynamicSection, ServiceCategory, ConfiguratorItemResult, BotConfig, BenefitsConfig } from "../types";
 import { TRANSLATIONS, SERVICES_DATA, CONFIGURATOR_ITEMS } from '../constants';
 
-// --- REAL SUPABASE IMPLEMENTATION ---
-// This file replaces the mock data with actual DB calls.
-// Ensure your Supabase DB has tables: 'brand_config', 'services', 'configurator_items', 'leads', 'bot_config', 'notification_settings'
-
-// --- HELPER: Upload Files to Storage ---
 export const uploadFileToStorage = async (file: File, bucket: string, path: string): Promise<string | null> => {
   try {
     const fileExt = file.name.split('.').pop();
@@ -30,14 +25,11 @@ export const uploadFileToStorage = async (file: File, bucket: string, path: stri
   }
 };
 
-// --- AUTH ---
-
 export const checkAuth = async (): Promise<boolean> => {
   const { data: { session } } = await supabase.auth.getSession();
   return !!session;
 };
 
-// Now accepts email and password for real auth
 export const loginMock = async (password: string, email?: string): Promise<boolean> => {
   if (!email) {
      console.error("Email required for real Supabase auth");
@@ -59,8 +51,6 @@ export const logoutMock = async () => {
   await supabase.auth.signOut();
 };
 
-// --- BRAND CONFIG ---
-
 export const getBrandConfig = async (): Promise<BrandConfig> => {
   const { data, error } = await supabase
     .from('brand_config')
@@ -69,7 +59,6 @@ export const getBrandConfig = async (): Promise<BrandConfig> => {
 
   if (error || !data) {
     console.warn("Could not fetch brand config (using defaults/mock temporarily)", error);
-    // Fallback to initial structure if DB is empty to prevent crash
     return {
         siteName: "EportsTech",
         favicon: "",
@@ -101,11 +90,9 @@ export const getBrandConfig = async (): Promise<BrandConfig> => {
   return data as BrandConfig;
 };
 
-// Updated to handle file uploads
 export const updateBrandConfig = async (config: Partial<BrandConfig>, files?: Record<string, File>): Promise<boolean> => {
   let updatedConfig = { ...config };
 
-  // Handle File Uploads if present
   if (files) {
       if (files.navLogo) {
           const url = await uploadFileToStorage(files.navLogo, 'brand-assets', 'nav-logo');
@@ -125,11 +112,10 @@ export const updateBrandConfig = async (config: Partial<BrandConfig>, files?: Re
       }
   }
 
-  // Determine if update or insert (usually we have one row with ID 1)
   const { error } = await supabase
     .from('brand_config')
     .update(updatedConfig)
-    .eq('id', 1); // Assuming singleton pattern row id=1
+    .eq('id', 1);
 
   if (error) {
       console.error("Error updating brand config:", error);
@@ -138,18 +124,26 @@ export const updateBrandConfig = async (config: Partial<BrandConfig>, files?: Re
   return true;
 };
 
-// --- SERVICES ---
-
+// === SERVICES ===
 export const getServices = async (): Promise<Service[]> => {
+  console.log('📤 [getServices] Fetching from Supabase...');
   const { data, error } = await supabase
     .from('services')
     .select('*')
     .order('sort_order', { ascending: true });
 
-  if (error || !data || data.length === 0) {
-      // Return constants if DB empty
-      return SERVICES_DATA;
+  if (error) {
+    console.error('❌ [getServices] Error:', error);
+    console.log('📤 [getServices] Returning CONSTANTS as fallback');
+    return SERVICES_DATA;
   }
+
+  if (!data || data.length === 0) {
+    console.warn('⚠️ [getServices] No data from Supabase, returning CONSTANTS');
+    return SERVICES_DATA;
+  }
+
+  console.log('✅ [getServices] Loaded', data.length, 'services from Supabase');
   return data as Service[];
 };
 
@@ -165,17 +159,26 @@ export const updateServices = async (services: Service[]): Promise<boolean> => {
   return true;
 };
 
-// --- CONFIGURATOR ITEMS ---
-
+// === CONFIGURATOR ITEMS ===
 export const getConfiguratorItems = async (): Promise<ConfiguratorItem[]> => {
+  console.log('📤 [getConfiguratorItems] Fetching from Supabase...');
   const { data, error } = await supabase
     .from('configurator_items')
     .select('*')
     .order('sort_order', { ascending: true });
 
-  if (error || !data || data.length === 0) {
-      return CONFIGURATOR_ITEMS;
+  if (error) {
+    console.error('❌ [getConfiguratorItems] Error:', error);
+    console.log('📤 [getConfiguratorItems] Returning CONSTANTS as fallback');
+    return CONFIGURATOR_ITEMS;
   }
+
+  if (!data || data.length === 0) {
+    console.warn('⚠️ [getConfiguratorItems] No data from Supabase, returning CONSTANTS');
+    return CONFIGURATOR_ITEMS;
+  }
+
+  console.log('✅ [getConfiguratorItems] Loaded', data.length, 'items from Supabase');
   return data as ConfiguratorItem[];
 };
 
@@ -201,13 +204,9 @@ export const deleteConfiguratorItem = async (id: string): Promise<boolean> => {
   return !error;
 };
 
-// --- CUSTOM SECTIONS ---
-// (Simplified for now, similar pattern)
 export const getCustomSections = async (): Promise<DynamicSection[]> => {
-  return []; // Placeholder until table created
+  return [];
 };
-
-// --- LEADS ---
 
 export const submitLead = async (data: LeadForm): Promise<{ success: boolean; error?: string }> => {
   const { error } = await supabase
@@ -240,11 +239,8 @@ export const getConfiguratorLeads = async (): Promise<ConfiguratorLead[]> => {
     .order('created_at', { ascending: false });
 
   if (error) return [];
-  // Map snake_case DB to camelCase if necessary, or ensure DB columns match types
   return data as unknown as ConfiguratorLead[];
 };
-
-// --- BOT CONFIG ---
 
 export const getBotConfig = async (): Promise<BotConfig> => {
   const { data, error } = await supabase
@@ -253,7 +249,6 @@ export const getBotConfig = async (): Promise<BotConfig> => {
     .single();
 
   if (error || !data) {
-      // Fallback
       return {
           name: "NEXI_tech",
           tone: "professional" as const,
@@ -278,8 +273,6 @@ export const updateBotConfig = async (config: BotConfig): Promise<boolean> => {
     .eq('id', 1);
    return !error;
 };
-
-// --- NOTIFICATIONS ---
 
 export const getNotificationSettings = async (): Promise<NotificationSettings> => {
     const { data, error } = await supabase
