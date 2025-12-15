@@ -133,11 +133,7 @@ const SyncPage: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-xs text-gray-600 mb-2"><strong>Credenciales:</strong></p>
-            <p className="text-xs text-gray-600">Email: <code className="bg-white px-2 py-1 rounded border">sync@eportstech.com</code></p>
-            <p className="text-xs text-gray-600">Contraseña: <code className="bg-white px-2 py-1 rounded border">sync123</code></p>
-          </div>
+
         </div>
       </div>
     );
