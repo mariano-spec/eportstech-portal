@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, CheckCircle, AlertTriangle, Loader } from 'lucide-react';
-import { supabase } from '../services/supabaseClient';
+import { supabaseAdmin } from '../services/supabaseClient';
 import { SERVICES_DATA, CONFIGURATOR_ITEMS } from '../constants';
 
 interface SyncStatus {
