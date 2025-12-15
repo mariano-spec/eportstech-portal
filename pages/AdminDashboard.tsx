@@ -105,7 +105,6 @@ const AdminDashboard: React.FC = () => {
       const confLeads = await getConfiguratorLeads();
       setConfiguratorLeads(confLeads);
 
-
       let brand;
       try {
         brand = await getBrandConfig();
@@ -139,6 +138,34 @@ const AdminDashboard: React.FC = () => {
           }
         };
       }
+      if (!brand.footer) {
+          brand.footer = {
+             copyrightText: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+             privacyText: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+             legalText: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+             cookiesText: { es: '', ca: '', en: '', fr: '', de: '', it: '' }
+          };
+      }
+      if (!brand.hero.imagePosition) {
+          brand.hero.imagePosition = 'center';
+      }
+      setBrandConfig(brand);
+
+      const items = await getConfiguratorItems();
+      setConfiguratorItems(items);
+
+      const notif = await getNotificationSettings();
+      setNotificationSettings(notif);
+
+      const srvs = await getServices();
+      setServices(srvs);
+
+      const sects = await getCustomSections();
+      setCustomSections(sects);
+
+      const bConfig = await getBotConfig();
+      setBotConfig(bConfig);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
