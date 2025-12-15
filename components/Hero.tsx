@@ -1,0 +1,117 @@
+
+import React from 'react';
+import { ArrowRight, Building2 } from 'lucide-react';
+import { HeroConfig, Language } from '../types';
+import { TRANSLATIONS } from '../constants'; // Fallback only
+import { trackEvent } from '../services/analytics';
+
+interface HeroProps {
+  lang: Language;
+  config: HeroConfig;
+  onConsultationRequest?: () => void;
+}
+
+const Hero: React.FC<HeroProps> = ({ lang, config, onConsultationRequest }) => {
+  const handleCtaClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    trackEvent('cta_click', {
+      location: 'hero_section',
+      label: 'request_consultation'
+    });
+    if (onConsultationRequest) {
+      onConsultationRequest();
+    }
+  };
+
+  const handleServicesClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    trackEvent('cta_click', {
+      location: 'hero_section',
+      label: 'browse_solutions'
+    });
+    const servicesSection = document.getElementById('services');
+    if (servicesSection) {
+      servicesSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const bgSrc = config.image || "/hq-background.jpg";
+  // Fallback texts if config is loading or empty (shouldn't happen with correct mock init)
+  const title = config.title?.[lang] || TRANSLATIONS.heroTitle[lang];
+  const subtitle = config.subtitle?.[lang] || TRANSLATIONS.heroSubtitle[lang];
+  const ctaText = config.ctaText?.[lang] || TRANSLATIONS.ctaButton[lang];
+  
+  // Opacity handling
+  const opacity = config.overlayOpacity !== undefined ? config.overlayOpacity : 0.6;
+  const imagePosition = config.imagePosition || 'center'; // default to center
+
+  return (
+    <div className="relative bg-slate-900 text-white overflow-hidden min-h-[85vh] flex items-center">
+      
+      {/* Background Image */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src={bgSrc}
+          alt="EportsTech Headquarters" 
+          className="w-full h-full object-cover transition-opacity duration-500"
+          style={{ opacity: 1, objectPosition: imagePosition }} // Use dynamic position
+        />
+        {/* Dynamic Overlay */}
+        <div 
+            className="absolute inset-0 bg-slate-900 transition-colors duration-500"
+            style={{ backgroundColor: `rgba(15, 23, 42, ${opacity})` }} 
+        ></div>
+        {/* Gradient for text readability always present at bottom */}
+         <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-transparent to-transparent"></div>
+      </div>
+      
+      {/* Abstract Shapes Overlay - Opacity linked to main overlay for cleanliness */}
+      <div 
+          className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-primary-500 blur-3xl animate-pulse pointer-events-none"
+          style={{ opacity: opacity * 0.4 }}
+      ></div>
+      <div 
+          className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-blue-600 blur-3xl pointer-events-none"
+          style={{ opacity: opacity * 0.4 }}
+      ></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-12">
+        <div className="lg:w-3/4 animate-fade-in-up">
+          {/* Business Solutions Tag */}
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium mb-8 border border-white/20 shadow-lg">
+            <Building2 size={16} className="text-primary-300" />
+            <span className="tracking-wide">Soluciones Empresariales</span>
+          </div>
+
+          <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight leading-tight mb-6 drop-shadow-2xl">
+            {title}
+          </h1>
+          
+          <p className="text-xl md:text-2xl text-slate-200 mb-10 font-light max-w-2xl leading-relaxed drop-shadow-lg">
+            {subtitle}
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button 
+              onClick={handleCtaClick}
+              className="group inline-flex items-center justify-center bg-primary-600 hover:bg-primary-500 text-white text-lg font-semibold px-8 py-4 rounded-lg transition-all transform hover:scale-105 shadow-xl hover:shadow-primary-500/25 cursor-pointer"
+            >
+              {ctaText}
+              <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" size={20} />
+            </button>
+            
+            <a 
+              href="#services" 
+              onClick={handleServicesClick}
+              className="inline-flex items-center justify-center bg-white/5 border border-white/30 hover:bg-white/10 text-white text-lg font-medium px-8 py-4 rounded-lg transition-colors backdrop-blur-md"
+            >
+              {TRANSLATIONS.servicesTitle[lang]}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Hero;

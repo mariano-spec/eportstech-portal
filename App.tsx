@@ -1,0 +1,237 @@
+import React, { useState, useEffect } from 'react';
+import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Hero from './components/Hero';
+import ServicesSection from './components/ServicesSection';
+import BenefitsSection from './components/BenefitsSection';
+import ContactForm from './components/ContactForm';
+import Chatbot from './components/Chatbot';
+import SolutionsConfigurator from './components/SolutionsConfigurator';
+import AdminDashboard from './pages/AdminDashboard';
+import SyncPage from './pages/SyncPage';
+import { Language, ConfiguratorItem, BrandConfig, Service } from './types';
+import { initGA, trackPageView } from './services/analytics';
+import { getBrandConfig } from './services/supabaseMock';
+import { Lock } from 'lucide-react';
+
+// Component to handle route tracking
+const RouteTracker: React.FC = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPageView(location.pathname + location.search);
+  }, [location]);
+
+  return null;
+};
+
+// Main Landing Page Layout
+const HomePage: React.FC<{ lang: Language, brandConfig: BrandConfig }> = ({ lang, brandConfig }) => {
+  const [customMessage, setCustomMessage] = useState<string>('');
+  const [prefilledService, setPrefilledService] = useState<string>('');
+
+  const handleConfiguratorRequest = (selectedItems: ConfiguratorItem[]) => {
+    // Generate a summary string
+    const itemsList = selectedItems.map(item => `- ${item.title[lang]} (${item.benefit[lang]})`).join('\n');
+    
+    let intro = "";
+    switch (lang) {
+        case 'es': intro = "Hola, estoy interesado en recibir información y presupuesto sobre la siguiente configuración personalizada para mi empresa:\n\n"; break;
+        case 'ca': intro = "Hola, estic interessat en rebre informació i pressupost sobre la següent configuració personalitzada per a la meva empresa:\n\n"; break;
+        case 'fr': intro = "Bonjour, je souhaite recevoir des informations et un devis pour la configuration personnalisée suivante pour mon entreprise:\n\n"; break;
+        case 'de': intro = "Hallo, ich bin daran interessiert, Informationen und ein Angebot für die folgende kundenspezifische Konfiguration für mein Unternehmen zu erhalten:\n\n"; break;
+        case 'it': intro = "Salve, sono interessato a ricevere informazioni e un preventivo per la seguente configurazione personalizzata per la mia azienda:\n\n"; break;
+        default: intro = "Hello, I am interested in receiving information and a quote for the following custom configuration for my company:\n\n";
+    }
+
+    const msg = `${intro}${itemsList}`;
+    setCustomMessage(msg);
+    setPrefilledService('Custom Configuration');
+
+    // Scroll to contact form
+    const contactSection = document.getElementById('contact');
+    if (contactSection) {
+      contactSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleServiceRequest = (service: Service) => {
+    let msg = "";
+    const title = service.title[lang];
+    
+    switch (lang) {
+        case 'es': msg = `Hola, me gustaría solicitar más información y asesoramiento sobre vuestra solución de ${title}.`; break;
+        case 'ca': msg = `Hola, m'agradaria sol·licitar més informació i assessorament sobre la vostra solució de ${title}.`; break;
+        case 'fr': msg = `Bonjour, je souhaite demander plus d'informations sur votre solution ${title}.`; break;
+        case 'de': msg = `Hallo, ich möchte weitere Informationen zu Ihrer Lösung ${title} anfordern.`; break;
+        case 'it': msg = `Salve, vorrei richiedere maggiori informazioni sulla vostra soluzione ${title}.`; break;
+        default: msg = `Hello, I would like to request more information about your ${title} solution.`;
+    }
+
+    setCustomMessage(msg);
+    setPrefilledService(service.title.en); // Value in dropdown is EN title
+
+    const contactSection = document.getElementById('contact');
+    if (contactSection) {
+      contactSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleConsultationRequest = () => {
+      let msg = "";
+      switch (lang) {
+          case 'es': msg = "Hola, estoy interesado en recibir una consultoría gratuita para analizar las necesidades tecnológicas de mi empresa."; break;
+          case 'ca': msg = "Hola, estic interessat en rebre una consultoria gratuïta per analitzar les necessitats tecnològiques de la meva empresa."; break;
+          case 'fr': msg = "Bonjour, je suis intéressé par une consultation gratuite pour analyser les besoins technologiques de mon entreprise."; break;
+          case 'de': msg = "Hallo, ich bin an einer kostenlosen Beratung interessiert, um die technologischen Bedürfnisse meines Unternehmens zu analysieren."; break;
+          case 'it': msg = "Salve, sono interessato a ricevere una consulenza gratuita per analizzare le esigenze tecnologiche della mia azienda."; break;
+          default: msg = "Hello, I am interested in receiving a free consultation to analyze my company's technological needs.";
+      }
+
+      setCustomMessage(msg);
+      setPrefilledService('Consulting'); // Maps to "Consulting" in Dropdown
+
+      const contactSection = document.getElementById('contact');
+      if (contactSection) {
+          contactSection.scrollIntoView({ behavior: 'smooth' });
+      }
+  };
+
+  const footerLogo = brandConfig.footerLogo || "/logo-white.png";
+  const privacyText = brandConfig.footer?.privacyText?.[lang] || "Privacy Policy";
+  const legalText = brandConfig.footer?.legalText?.[lang] || "Legal Notice";
+  const cookiesText = brandConfig.footer?.cookiesText?.[lang] || "Cookies";
+  const copyrightText = brandConfig.footer?.copyrightText?.[lang] || `EportsTech © ${new Date().getFullYear()}`;
+
+  return (
+    <>
+      <Hero lang={lang} config={brandConfig.hero} onConsultationRequest={handleConsultationRequest} />
+      <BenefitsSection lang={lang} config={brandConfig.benefits} />
+      <ServicesSection lang={lang} onServiceRequest={handleServiceRequest} />
+      <SolutionsConfigurator lang={lang} onRequestQuote={handleConfiguratorRequest} />
+      <ContactForm 
+          lang={lang} 
+          prefilledMessage={customMessage} 
+          prefilledService={prefilledService}
+          contactEmail={brandConfig.contactEmail}
+          contactPhone={brandConfig.contactPhone}
+      />
+      
+      <footer className="bg-slate-900 text-slate-400 py-12">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col items-center text-center">
+          {/* White Logo in Footer - Standard footer size */}
+          <div className="mb-8">
+              <img 
+                  src={footerLogo} 
+                  alt="Eports Tech" 
+                  className="h-10 w-auto opacity-90 hover:opacity-100 transition-opacity"
+                  onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                  }}
+              />
+          </div>
+
+          <p className="mb-6 text-sm opacity-80">{copyrightText}</p>
+          <div className="flex flex-wrap justify-center gap-6 text-sm items-center">
+            <a href="#" className="hover:text-white transition-colors">{privacyText}</a>
+            <a href="#" className="hover:text-white transition-colors">{legalText}</a>
+            <a href="#" className="hover:text-white transition-colors">{cookiesText}</a>
+            {/* Hidden Admin Link */}
+            <Link to="/admin" className="text-slate-700 hover:text-slate-500 transition-colors ml-2" title="Acceso Corporativo">
+                <Lock size={12} />
+            </Link>
+          </div>
+        </div>
+      </footer>
+    </>
+  );
+};
+
+const App: React.FC = () => {
+  const [language, setLanguage] = useState<Language>('es');
+  const [brandConfig, setBrandConfig] = useState<BrandConfig>({
+      siteName: '',
+      favicon: '',
+      navLogo: '/logo-blue.png', // Default init to avoid flicker
+      footerLogo: '/logo-white.png',
+      contactEmail: 'contact@eportstech.com',
+      contactPhone: '+34 900 123 456',
+      hero: {
+          image: '/hq-background.jpg',
+          overlayOpacity: 0.6,
+          title: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+          subtitle: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+          ctaText: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+          imagePosition: 'center'
+      },
+      benefits: {
+        mainTitle: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+        subtitle: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+        items: []
+      },
+      footer: {
+         copyrightText: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+         privacyText: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+         legalText: { es: '', ca: '', en: '', fr: '', de: '', it: '' },
+         cookiesText: { es: '', ca: '', en: '', fr: '', de: '', it: '' }
+      }
+  });
+
+  useEffect(() => {
+    initGA();
+    // Load branding settings immediately
+    const loadSettings = async () => {
+        try {
+          const config = await getBrandConfig();
+          setBrandConfig(config);
+        } catch (e) {
+          console.error("Failed to load brand config", e);
+        }
+    };
+    loadSettings();
+    
+    // Polling to keep synced with Admin changes for demo (simulating realtime db)
+    const interval = setInterval(loadSettings, 1000); 
+    return () => clearInterval(interval);
+  }, []);
+
+  // Effect to update Document Title and Favicon based on Brand Config
+  useEffect(() => {
+    if (brandConfig.siteName) {
+      document.title = brandConfig.siteName;
+    }
+    
+    if (brandConfig.favicon) {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = brandConfig.favicon;
+    }
+  }, [brandConfig.siteName, brandConfig.favicon]);
+
+  return (
+    <HashRouter>
+      <RouteTracker />
+      <div className="min-h-screen flex flex-col font-sans">
+        <Navbar currentLang={language} setLanguage={setLanguage} logoUrl={brandConfig.navLogo} />
+        
+        <Routes>
+          <Route path="/" element={<HomePage lang={language} brandConfig={brandConfig} />} />
+          <Route path="/sync" element={<SyncPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        
+        {/* Chatbot is global */}
+        <div className="relative z-50">
+           <Chatbot lang={language} />
+        </div>
+      </div>
+    </HashRouter>
+  );
+};
+
+export default App;

@@ -1,0 +1,72 @@
+# Netlify Configuration for EportsTech Portal
+# Deploy automatically from GitHub to Netlify
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NODE_ENV = "production"
+
+# Development settings
+[dev]
+  command = "npm run dev"
+  framework = "#custom"
+  port = 5173
+  publish = "dist"
+
+# Redirects for SPA (Single Page Application)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Cache headers for static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache headers for index.html (short cache)
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Cache headers for fonts
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Context-specific settings (deploy previews)
+[context.deploy-preview]
+  command = "npm run build"
+  
+[context.deploy-preview.environment]
+  VITE_SUPABASE_URL = "https://staging-project.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "staging-key"
+
+# Production context
+[context.production]
+  [context.production.environment]
+    VITE_SUPABASE_URL = "https://prod-project.supabase.co"
+    VITE_SUPABASE_ANON_KEY = "prod-key"
+    NODE_ENV = "production"
+
+# Edge functions configuration (if needed)
+# [functions]
+#   directory = "netlify/functions"
+#   node_bundler = "esbuild"
